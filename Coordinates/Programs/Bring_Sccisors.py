@@ -1,14 +1,8 @@
-#Bring the Scalpel
-#please
-#Carlitos my god
-#Eunice mi patrona
+#Bring the Scalpelx
 #!/usr/bin/env python3
-#HOLA YO SOY MATEO
 # Software License Agreement (BSD License)
-# rarara
 # Copyright (c) 2022, UFACTORY, Inc.
 # All rights reserved.
-#
 # Author: Vinman <vinman.wen@ufactory.cc> <vinman.cub@gmail.com>
 
 """
