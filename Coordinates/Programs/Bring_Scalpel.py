@@ -143,7 +143,7 @@ class RobotMain(object):
             code = self._arm.set_position(*[-336.6, -176.9, 225.9, 179.7, -0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
             if not self._check_code(code, 'set_position'):
                 return
-            code = self._arm.set_position(*[1.6, -321.3, 192.6, 179.7, -0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            code = self._arm.set_position(*[1.6, -321.3, 192.6, 179.7, -0.2, -78.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
             if not self._check_code(code, 'set_position'):
                 return
             code = self._arm.set_position(*[360.0, 217.0, 199.0, -179.7, -0.2, 20.4], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
