@@ -145,7 +145,7 @@ class RobotMain(object):
             code = self._arm.set_position(*[-257.8, -36.1, 184.6, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
             if not self._check_code(code, 'set_position'):
                 return
-            code = self._arm.set_position(*[-257.8, -36.1, 160, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            code = self._arm.set_position(*[-257.8, -36.1, 40.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
             if not self._check_code(code, 'set_position'):
                 return
             code = self._arm.open_lite6_gripper()
