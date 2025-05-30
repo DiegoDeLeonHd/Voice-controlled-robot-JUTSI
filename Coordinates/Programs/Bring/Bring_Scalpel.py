@@ -1,9 +1,8 @@
+#Bring the Scalpel
 #!/usr/bin/env python3
 # Software License Agreement (BSD License)
-#
 # Copyright (c) 2022, UFACTORY, Inc.
 # All rights reserved.
-#
 # Author: Vinman <vinman.wen@ufactory.cc> <vinman.cub@gmail.com>
 
 """
@@ -122,48 +121,41 @@ class RobotMain(object):
             code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
             if not self._check_code(code, 'set_position'):
                 return
-            code = self._arm.set_position(*[360.9, 217.0, 199.0, 180.0, 0.0, 39.4], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-            if not self._check_code(code, 'set_position'):
-                return
             code = self._arm.open_lite6_gripper()
             if not self._check_code(code, 'open_lite6_gripper'):
                 return
-            time.sleep(5)
+            code = self._arm.set_position(*[57.8, -189.1, 199.0, 180.0, 0.0, -92.7], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=False)
+            if not self._check_code(code, 'set_position'):
+                return
+            code = self._arm.set_position(*[-336.6, -268.5, 188.1, 179.7, -0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            code = self._arm.set_position(*[-336.6, -268.5, 16.7, 179.7, -0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
             code = self._arm.close_lite6_gripper()
             if not self._check_code(code, 'close_lite6_gripper'):
+                return
+            time.sleep(2)
+            code = self._arm.set_position(*[-336.6, -268.5, 188.1, 179.7, -0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            code = self._arm.set_position(*[-336.6, -176.9, 225.9, 179.7, -0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            code = self._arm.set_position(*[1.6, -321.3, 192.6, 179.7, -0.2, -78.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            code = self._arm.set_position(*[360.0, 217.0, 199.0, -179.7, -0.2, 20.4], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            time.sleep(2)
+            code = self._arm.open_lite6_gripper()
+            if not self._check_code(code, 'open_lite6_gripper'):
                 return
             time.sleep(1)
-            code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-            if not self._check_code(code, 'set_position'):
-                return
-            code = self._arm.set_position(*[199.8, -173.0, 339.6, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-            if not self._check_code(code, 'set_position'):
-                return
-            code = self._arm.set_position(*[-257.8, -36.1, 338.9, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-            if not self._check_code(code, 'set_position'):
-                return
-            code = self._arm.set_position(*[-257.8, -36.1, 184.6, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-            if not self._check_code(code, 'set_position'):
-                return
-            code = self._arm.set_position(*[-257.8, -36.1, 152.2, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-            if not self._check_code(code, 'set_position'):
-                return
-            code = self._arm.open_lite6_gripper()
-            if not self._check_code(code, 'open_lite6_gripper'):
-                return
-            time.sleep(3)
-            code = self._arm.set_position(*[-257.8, -36.1, 184.6, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-            if not self._check_code(code, 'set_position'):
-                return
-            time.sleep(3)
-            code = self._arm.close_lite6_gripper()
-            if not self._check_code(code, 'close_lite6_gripper'):
-                return
             code = self._arm.stop_lite6_gripper()
             if not self._check_code(code, 'stop_lite6_gripper'):
-                return
-            code = self._arm.set_position(*[-87.6, -221.3, 263.3, 179.6, 0.1, -0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-            if not self._check_code(code, 'set_position'):
                 return
             code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
             if not self._check_code(code, 'set_position'):
