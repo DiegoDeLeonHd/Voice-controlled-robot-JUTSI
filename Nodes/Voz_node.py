@@ -119,6 +119,13 @@ class VozCompletaNode(Node):
                 self.publisher_.publish(msg)
                 self.get_logger().info(f"📢 Comando enviado: {mensaje}")
                 
+            elif accion == "take" and objeto not in partes: 
+                mensaje = f"{accion};{objeto}"
+                msg = String()
+                msg.data = mensaje
+                self.publisher_.publish(msg)
+                self.get_logger().info(f"📢 Comando enviado: {mensaje}")
+                
             elif tamaño and accion == "bind up" and "bandage" in partes:
                 mensaje = f"{accion};{tamaño}"
                 msg = String()
