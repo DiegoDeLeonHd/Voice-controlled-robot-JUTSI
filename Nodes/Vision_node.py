@@ -5,13 +5,13 @@ import cv2
 from ultralytics import YOLO
 
 class VisionNode(Node):
-    def __init__(self):
-        super().__init__('vision_node')
+    def _init_(self):
+        super()._init_('vision_node')
 
         # Cargar modelo
         self.model_path = '/home/diego/jutsi/src/sistema_robot/Dataset_final_2/runs/detect/train/weights/best.pt'
         self.model = YOLO(self.model_path)
-        self.class_names = ['Bandage', 'Scalpel', 'Scissors']
+        self.class_names = ['bandage', 'scalpel', 'tweezers']
 
         # Publicador
         self.retro_pub = self.create_publisher(String, 'retroalimentacion', 10)
@@ -24,7 +24,7 @@ class VisionNode(Node):
             return
 
         cv2.namedWindow("Detección de Objetos", cv2.WINDOW_NORMAL)
-        self.timer = self.create_timer(0.1, self.process_frame)
+        self.timer = self.create_timer(0.2, self.process_frame)
 
     def process_frame(self):
         ret, frame = self.cap.read()
@@ -47,19 +47,17 @@ class VisionNode(Node):
 
                 # Mostrar recuadro
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
-                color = (255, 0, 0) if name == 'Bandage' else (0, 255, 0) if name == 'Scissors' else (0, 0, 255)
+                color = (255, 0, 0) if name == 'bandage' else (0, 255, 0) if name == 'tweezers' else (0, 0, 255)
                 label = f"{name} ({conf:.2f})"
                 cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(frame, label, (x1, y1 - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
 
-        # Publicar herramientas faltantes
-        herramientas_faltantes = set(self.class_names) - objetos_detectados
-        if herramientas_faltantes:
-            msg = String()
-            msg.data = ";".join(herramientas_faltantes)
-            self.retro_pub.publish(msg)
-            self.get_logger().info(f"⚠️ Herramientas faltantes: {msg.data}")
+        #Detecta y publica objetos:
+        msg = String()
+        msg.data = ";".join(objetos_detectados)
+        self.retro_pub.publish(msg)
+        self.get_logger().info(f"Herramientas detectadas: {msg.data}")
 
         # Mostrar ventana
         cv2.imshow('Detección de Objetos', frame)
