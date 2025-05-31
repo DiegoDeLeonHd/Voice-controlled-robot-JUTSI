@@ -5,8 +5,8 @@ import cv2
 from ultralytics import YOLO
 
 class VisionNode(Node):
-    def _init_(self):
-        super()._init_('vision_node')
+    def __init__(self):
+        super().__init__('vision_node')
 
         # Cargar modelo
         self.model_path = '/home/diego/jutsi/src/sistema_robot/Dataset_final_2/runs/detect/train/weights/best.pt'
@@ -17,7 +17,7 @@ class VisionNode(Node):
         self.retro_pub = self.create_publisher(String, 'retroalimentacion', 10)
 
         # Cámara
-        self.cap = cv2.VideoCapture(2)
+        self.cap = cv2.VideoCapture(0)
         if not self.cap.isOpened():
             self.get_logger().error("No se pudo abrir la cámara.")
             rclpy.shutdown()

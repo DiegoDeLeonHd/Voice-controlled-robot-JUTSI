@@ -18,8 +18,8 @@ model = whisper.load_model("medium")
 
 
 class VozCompletaNode(Node):
-    def _init_(self):
-        super()._init_('voz_comando_node')
+    def __init__(self):
+        super().__init__('voz_comando_node')
         
         # Suscriptores
         self.create_subscription(String, 'retroalimentacion', self.callback_retro, 10)
@@ -44,7 +44,7 @@ class VozCompletaNode(Node):
             self.grabar_y_procesar()
 
     def saludo_inicial(self):
-        texto = "Hi" #, my name is iutsi, your medical assistant. How can I help you today? Please press enter to give me instructions.
+        texto = "Hi, my name is iutsi, your medical assistant. How can I help you today? Please press enter to give me instructions." #, 
         self.get_logger().info("🔊 Reproduciendo saludo de bienvenida con gTTS y mpg123...")
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
@@ -63,6 +63,7 @@ class VozCompletaNode(Node):
         #Espera por retroalimentación del nodo de visión
         wait_time = 0
         while not self.partes_retro and wait_time < 5:
+            
             self.get_logger().info("Esperando herramientas detectadas por visión...")
             rclpy.spin_once(self, timeout_sec=0.5)
             wait_time += 0.5
@@ -89,6 +90,7 @@ class VozCompletaNode(Node):
         self.get_logger().info("🎤 Grabando audio...")
         frames = [stream.read(CHUNK) for _ in range(0, int(RATE / CHUNK * DURACION))]
         self.get_logger().info("✅ Grabación finalizada.")
+        
 
         stream.stop_stream()
         stream.close()
@@ -119,25 +121,52 @@ class VozCompletaNode(Node):
                 self.publisher_.publish(msg)
                 self.get_logger().info(f"📢 Comando enviado: {mensaje}")
                 
+            elif accion == "take" and objeto not in partes:
+                mensaje = f"{accion};{objeto}"
+                msg = String()
+                msg.data = mensaje
+                self.publisher_.publish(msg)
+                self.get_logger().info(f"Comando enviado: {mensaje}")
+                
             elif tamaño and accion == "bind up" and "bandage" in partes:
                 mensaje = f"{accion};{tamaño}"
                 msg = String()
                 msg.data = mensaje
                 self.publisher_.publish(msg)
                 self.get_logger().info(f"📢 Comando enviado: {mensaje}")
+                
+                
             elif accion == "cut" and "scalpel" in partes:
                 mensaje = f"{accion};body"
                 msg = String()
                 msg.data = mensaje
                 self.publisher_.publish(msg)
                 self.get_logger().info(f"📢 Comando enviado: {mensaje}") 
+                
+                
             else:
                 self.get_logger().warn("No se detectó objeto o tamaño.")
+                texto = "No se detectó objeto o tamaño" #, 
+                self.get_logger().info("🔊 Reproduciendo...")
+                try:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
+                        gTTS(text=texto, lang='en').save(f.name)
+                        os.system(f"mpg123 {f.name}")
+                except Exception as e:
+                    self.get_logger().error(f"❌ Error al reproducir saludo: {e}")
         else:
             self.get_logger().warn("Accion u objeto no encontrada.")
-
+            texto = "Accion u objeto no encontrada." #, 
+            self.get_logger().info("🔊 Reproduciendo...")
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
+                        gTTS(text=texto, lang='en').save(f.name)
+                        os.system(f"mpg123 {f.name}")
+            except Exception as e:
+                self.get_logger().error(f"❌ Error al reproducir saludo: {e}")
+    
     def start_node(self, sistema_robot, vision_node):
-            command = ["gnome-terminal","--", "ros2", "run", "sistema_robot", "vision_node"]
+            command = ["gnome-terminal","--","ros2", "run", "sistema_robot", "vision_node"]
             process = subprocess.Popen(command)
             self.get_logger().info(f"Nodo {vision_node} lanzado.")
             return process
@@ -168,4 +197,4 @@ def main(args=None):
     nodo = VozCompletaNode()
     rclpy.spin(nodo)
     nodo.destroy_node()
-    rclpy.shutdown(
+    rclpy.shutdown()
