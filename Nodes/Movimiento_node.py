@@ -137,8 +137,11 @@ def coordinates_detection():
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
             if circulo is not None and cuadrado is not None and not coordenadas_guardadas:
-                coordenadas_inicio = [(364 - coords_circle_tool_3D[0]), 1.5, coords_circle_tool_3D[2]] 
-                coordenadas_fin = [(458 - coords_square_tool_3D[0]), 1.5, coords_square_tool_3D[2]]
+                # coordenadas_inicio = [(364 - coords_circle_tool_3D[0]), 1.5, coords_circle_tool_3D[2]] 
+                # coordenadas_fin = [(458 - coords_square_tool_3D[0]), 1.5, coords_square_tool_3D[2]]
+                coordenadas_inicio = [290.4, -6.5, 68.7] 
+                coordenadas_fin = [380.3, -6.5, 76.9]
+                
                 #if coordenadas_inicio[2] >= 42 and coordenadas_inicio[2] <= 60 and coordenadas_fin[2]>=40 and coordenadas_fin[2] <=84: 
                 coordenadas_guardadas = True
                 print("Coordenadas guardadas:")
@@ -158,8 +161,8 @@ def coordinates_detection():
         return coordenadas_inicio, coordenadas_fin
 
 class Movimiento(Node):
-    def _init_(self, arm):  
-        super()._init_('movimiento')  
+    def __init__(self, arm):  
+        super().__init__('movimiento')  
         
         # Suscripción al tópico voz_comando
         self.subscription = self.create_subscription(String,'voz_comando',self.callback_voz,10)
@@ -181,14 +184,14 @@ class Movimiento(Node):
         
         # Diccionario con coordenadas (vacío o con datos si quieres)
         self.coordenadas = {
-            "scalpel": {"arriba": [-268.1,-268.6,144.8,179.7,0.2,-179.2],
-                        "abajo": [-321.6,-265.6,9.7,179.7,0.2,-179.2],
-                        "dejar": [-257.8, -36.1, 30, 179.8, 0.3, 172.8]
+            "scalpel": {"arriba": [-336.6, -268.5, 188.1, 179.7, -0.2, -179.2],
+                        "abajo": [-336.6, -268.5, 16.7, 179.7, -0.2, -179.2],
+                        "dejar": [-257.8, -36.1, 40, 180, 0, 0.2]
                         },
             
-            "tweezers": {"arriba": [-363.9,-135.5,130.3,179.7,0.1,175.7],
-                         "abajo": [-325.8,-132.7,16.2,179.7,0.1,175.7],
-                         "dejar": [-257.8, -36.1, 30, 179.8, 0.3, 172.8]
+            "tweezers": {"arriba": [-351.1, -132.2, 188.1, 179.7, -0.2, -179.2],
+                         "abajo": [-351.1, -132.2, 26.5, 179.7, -0.2, -179.2],
+                         "dejar": [-257.8, -36.1, 40, 180, 0, 0.2]
                          },
             
             "bandage": {"arriba": [-195.4,-255.9,165.1,179.7,0.2,-164.1],
@@ -196,7 +199,10 @@ class Movimiento(Node):
                         "abajo": [-196.5,-257.5,126.2,179.7,0.2,-164.1],
                         "abajo2": [-196.5,-257.5,126.2,-179.9,0.3,-89.6],
                         "intermedio": [-196.5,-261,147.3,179.7,0.2,-164.1],
-                        "dejar": [-257.8, -36.1, 152.2, 179.8, 0.3, 172.8]},
+                        "dejar": [-257.8, -36.1, 160, 180, 0, 0.2]},
+            
+            "small": {},
+            "big": {},
             
             
         }
@@ -327,7 +333,7 @@ class Movimiento(Node):
 
         if accion == 'bring':
             #self.bring(objeto)
-            texto = f"Bringing the {objeto}"
+            texto = f"Bringing the {objeto}, please receive it in the designated area."
             self.get_logger().info("🔊 Reproduciendo mensaje con gTTS y mpg123...")
             try:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
@@ -344,7 +350,7 @@ class Movimiento(Node):
              
         elif accion == 'take':
             #self.take(objeto)
-            texto = "I will take it to the workspace"
+            texto = f"I will take the {objeto} to the area for contaminated tools, please deliver it in the designated area and restock when possible."
             self.get_logger().info("🔊 Reproduciendo mensaje con gTTS y mpg123...")
             try:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
@@ -356,20 +362,20 @@ class Movimiento(Node):
                 
         elif accion == 'cut':
             #self.cut(objeto)
-            texto = "Please, make sure the arm is on the designated area and has the start and ending points marked. The robot will start the cut in a phew seconds, press stop in case of emergency"
-            self.get_logger().info("🔊 Reproduciendo saludo de bienvenida con gTTS y mpg123...")
+            texto = "Please, make sure the arm is on the designated area, and has the start and ending points marked.  The robot will start the cut in a phew seconds,  press stop in case of emergency"
+            self.get_logger().info("🔊 Reproduciendo...")
             try:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
                     gTTS(text=texto, lang='en').save(f.name)
                     os.system(f"mpg123 {f.name}")
             except Exception as e:
                 self.get_logger().error(f"❌ Error al reproducir saludo: {e}")
-            self.cut(objeto)
+            self.cut()
             
         elif accion == 'bind up':
             #self.bind_up(objeto)
-            texto = "For this action please place your arm on the holder, make sure your wrist is aligning with the bandage. Don't move your hand and keep it open with the palm towards the ceiling, your fingers must be fully extended. The robot will start shortly."
-            self.get_logger().info("🔊 Reproduciendo mensaje de bienvenida con gTTS y mpg123...")
+            texto = "For this action please place your arm on the holder, and make sure your wrist is aligning with the bandage.   Don't move your hand and keep it open with the palm towards the ceiling, your fingers must be fully extended.  The robot will start shortly."
+            self.get_logger().info("🔊 Reproduciendo mensaje...")
             try:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
                     gTTS(text=texto, lang='en').save(f.name)
@@ -384,7 +390,7 @@ class Movimiento(Node):
         else:
             self.get_logger().warn(f'Acción no reconocida: {accion}')
             texto = "Unknown command"
-            self.get_logger().info("🔊 Reproduciendo saludo de bienvenida con gTTS y mpg123...")
+            self.get_logger().info("🔊 Reproduciendo...")
             try:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
                     gTTS(text=texto, lang='en').save(f.name)
@@ -409,10 +415,14 @@ class Movimiento(Node):
         code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
                 return
-            #abre gripper
+        #abre gripper
         code = self._arm.open_lite6_gripper() 
         if not self._check_code(code, 'bring - open_lite6_gripper'):
             return
+        #posición intermedia
+        code = self._arm.set_position(*[57.8, -189.1, 199.0, 180.0, 0, -92.7], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
+        if not self._check_code(code, 'set_position'):
+                return
         #mover brazo arriba del objeto
         code = self._arm.set_position(*coords_arriba, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#arriba
         if not self._check_code(code, 'bring - set_position'):
@@ -423,26 +433,44 @@ class Movimiento(Node):
         code = self._arm.set_position(*coords_abajo, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'bring - set_position'):
             return
-        time.sleep(0.5)
+        time.sleep(2)
        
         # Cerrar el gripper para agarrar el objeto
         code = self._arm.close_lite6_gripper()
         if not self._check_code(code, 'bring - close_lite6_gripper'):
             return
-        time.sleep(0.5)
+        time.sleep(2)
 
         # Subir brazo con el objeto
         code = self._arm.set_position(*coords_arriba, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'bring - set_position'):
             return
-        time.sleep(0.5)
+        time.sleep(0.5
+                   )
+        # Mover brazo 
+        code = self._arm.set_position(*[-336.6, -176.9, 225.9, 179.7, 0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
+        if not self._check_code(code, 'set_position'):
+                return        
         # Mover brazo para la entrega
-        code = self._arm.set_position(*[1.6,-321.3,192.6,179.8,0.2,-111.3], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
+        code = self._arm.set_position(*[1.6, -321.3, 192.6, 179.7, -0.2, -78.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
                 return
-        
-        # Mover brazo para la entrega
-        code = self._arm.set_position(*[360.9,217,199,180,0,39.4], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
+        code = self._arm.set_position(*[360, 217, 199, -179.7, -0.2, 20.4], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
+        if not self._check_code(code, 'set_position'):
+                return
+        time.sleep(2)
+        #abre gripper
+        code = self._arm.open_lite6_gripper() 
+        if not self._check_code(code, 'bring - open_lite6_gripper'):
+            return
+        time.sleep(2)
+        #apaga el gripper
+        code = self._arm.stop_lite6_gripper() 
+        if not self._check_code(code, 'bring - open_lite6_gripper'):
+            return   
+        time.sleep(2)
+        #movimiento home
+        code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
                 return
             
@@ -459,74 +487,67 @@ class Movimiento(Node):
             return
         
         # Mover brazo a la posición de inicio
-        code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
+        code = self._arm.set_servo_angle(angle=[-1.2, -5.8, 34.4, -0.4, 40.4, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=False, radius=0.0)
+        if not self._check_code(code, 'set_servo_angle'):
+            return
+        code = self._arm.set_collision_sensitivity(1)
+        if not self._check_code(code, 'set_collision_sensitivity'):
+            return
+        self._tcp_speed = 85
+        code = self._arm.set_position(*[-33.2, -211.7, 205.2, -179.8, 0.2, -26.3], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
-                return
-        time.sleep(1.5)    
-        # # Abrir el gripper para agarrar el objeto
+            return
+        code = self._arm.set_position(*[-194.3, -262.2, 165.1, 179.7, 0.2, -164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        if not self._check_code(code, 'set_position'):
+            return
+        time.sleep(1)
         code = self._arm.open_lite6_gripper()
-        if not self._check_code(code, 'bring_bandage - open_lite6_gripper'):
+        if not self._check_code(code, 'open_lite6_gripper'):
             return
-        time.sleep(0.5)
-        
-        #mover brazo arriba del objeto
-        code = self._arm.set_position(*[-195.4, -255.9,165.1,179.7,0.2,-164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#arriba
-        if not self._check_code(code, 'bring_bandage - set_position'):
+        self._tcp_speed = 5
+        code = self._arm.set_position(*[-194.3, -262.2, 147.3, 179.7, 0.2, -164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        if not self._check_code(code, 'set_position'):
             return
-        time.sleep(0.5)
-        
-        #mover intermedio
-        code = self._arm.set_position(*[-196.5,-261,147.3,179.7,0.2,-164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
-        if not self._check_code(code, 'bring_bandage - set_position'):
-                return
-        time.sleep(1.5)
-        # # Cerrar el gripper para agarrar el objeto
+        time.sleep(1)
         code = self._arm.close_lite6_gripper()
-        if not self._check_code(code, 'bring_bandage - close_lite6_gripper'):
+        if not self._check_code(code, 'close_lite6_gripper'):
             return
-        
-        time.sleep(1.5)
-        
-    
-        # #apagar gripper
+        time.sleep(1)
         code = self._arm.stop_lite6_gripper()
         if not self._check_code(code, 'stop_lite6_gripper'):
             return
-            
-        time.sleep(1.5)
-        
-        # Bajar brazo hasta el objeto
-        code = self._arm.set_position(*[-196.5,-257.5,126.2,179.7,0.2,-164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-        if not self._check_code(code, 'bring_bandage - set_position'):
+        time.sleep(2)
+        code = self._arm.set_position(*[-194.3, -262.2, 126.2, 179.7, 0.2, -164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        if not self._check_code(code, 'set_position'):
             return
-        time.sleep(1.5)
-        
-        # #cerrar gripper
         code = self._arm.close_lite6_gripper()
         if not self._check_code(code, 'close_lite6_gripper'):
-                return
-            
-        time.sleep(1.5)
-        
-        #mover abajo 2 giro
-        self.get_logger().info("Girando gripper a -89.6")
-        code = self._arm.set_position(*[-196.5,-257.5,126.2,-179.9,0.3,-89.6], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
-        if not self._check_code(code, 'bring_bandage - set_position'):
-                return
-        time.sleep(1.5)
-        
-        # #mover arriba 2
-        code = self._arm.set_position(*[-196.5,-257.5,165.1,-179.9,0.3,-89.6], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
-        if not self._check_code(code, 'bring_bandage - set_position'):
-                return
-        time.sleep(1.5)
-        
-        #adicionales
+            return
+        time.sleep(2)
+        self._tcp_speed = 65
+        code = self._arm.set_position(*[-196.5, -257.5, 126.2, -179.9, 0.3, -89.6], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        if not self._check_code(code, 'set_position'):
+            return
+        code = self._arm.set_position(*[-196.5, -257.5, 165.1, -179.9, 0.3, -89.6], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        if not self._check_code(code, 'set_position'):
+            return
         code = self._arm.set_position(*[124.6, -301.5, 252.3, -179.8, 0.1, -29.8], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
         code = self._arm.set_position(*[293.7, 297.5, 199.2, -179.9, -0.1, 43.5], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
+            return
+        time.sleep(2)
+        code = self._arm.open_lite6_gripper()
+        if not self._check_code(code, 'open_lite6_gripper'):
+            return
+        time.sleep(2)
+        code = self._arm.stop_lite6_gripper()
+        if not self._check_code(code, 'stop_lite6_gripper'):
+            return
+        time.sleep(2)
+        code = self._arm.set_servo_angle(angle=[-1.2, -5.8, 34.4, -0.4, 40.4, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=False, radius=0.0)
+        if not self._check_code(code, 'set_servo_angle'):
             return
      
     #SUBRUTINA bind up small
@@ -751,23 +772,25 @@ class Movimiento(Node):
             self.get_logger().error(f'Coordenadas no definidas para: {objeto}')
             return
         
+        code = self._arm.set_servo_angle(angle=[-1.2, -5.8, 34.4, -0.4, 40.4, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=False, radius=0.0)
+        if not self._check_code(code, 'set_servo_angle'):
+            return
+        code = self._arm.set_collision_sensitivity(1)
+        if not self._check_code(code, 'set_collision_sensitivity'):
+            return
         self._tcp_speed = 85
-        #code = self._arm.set_collision_sensitivity(2)
-        #if not self._check_code(code, 'set_collision_sensitivity'):
-            #return
-            
         code = self._arm.set_position(*[-33.2, -211.7, 205.2, -179.8, 0.2, -26.3], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
-        code = self._arm.set_position(*[-195.4, -259.5, 165.1, 179.7, 0.2, -164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        code = self._arm.set_position(*[-194.3, -262.2, 165.1, 179.7, 0.2, -164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
         time.sleep(1)
         code = self._arm.open_lite6_gripper()
         if not self._check_code(code, 'open_lite6_gripper'):
             return
-        self._tcp_speed = 10
-        code = self._arm.set_position(*[-195.5, -260.5, 147.3, 179.7, 0.2, -164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        self._tcp_speed = 5
+        code = self._arm.set_position(*[-194.3, -262.2, 147.3, 179.7, 0.2, -164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
         time.sleep(1)
@@ -778,23 +801,20 @@ class Movimiento(Node):
         code = self._arm.stop_lite6_gripper()
         if not self._check_code(code, 'stop_lite6_gripper'):
             return
-        time.sleep(1)
-        code = self._arm.set_position(*[-195.5, -260.5, 126.2, 179.7, 0.2, -164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        time.sleep(2)
+        code = self._arm.set_position(*[-194.3, -262.2, 126.2, 179.7, 0.2, -164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
         code = self._arm.close_lite6_gripper()
         if not self._check_code(code, 'close_lite6_gripper'):
             return
-        time.sleep(1)
+        time.sleep(2)
         self._tcp_speed = 65
-        code = self._arm.set_position(*[-195.5, -260.5, 126.2, -179.9, 0.3, -89.6], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        code = self._arm.set_position(*[-196.5, -257.5, 126.2, -179.9, 0.3, -89.6], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
-        code = self._arm.set_position(*[-195.5, -260.5, 174.5, -179.7, 0.3, -89.6], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        code = self._arm.set_position(*[-196.5, -257.5, 165.1, -179.9, 0.3, -89.6], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
-            return
-        code = self._arm.set_servo_angle(angle=[0.0, -5.1, 37.3, 0.1, 42.4, -0.1], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
-        if not self._check_code(code, 'set_servo_angle'):
             return
         code = self._arm.set_servo_angle(angle=[-1.8, -2.8, 43.3, 178.0, 45.5, -88.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
         if not self._check_code(code, 'set_servo_angle'):
@@ -910,9 +930,9 @@ class Movimiento(Node):
             if interval < 0.01:
                 time.sleep(0.01 - interval)
         
-    #Rutina Take
+    #Subrutina Take
     def take(self, objeto):
-        self.get_logger().info(f'Iniciando bind de {objeto}')
+        self.get_logger().info(f'Iniciando take de {objeto}')
         if not self.return_subrutina:
             return
 
@@ -922,6 +942,7 @@ class Movimiento(Node):
         
         coords_dejar = self.coordenadas[objeto]['dejar']
         #take bandag real
+    
         code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
@@ -942,21 +963,20 @@ class Movimiento(Node):
         code = self._arm.set_position(*[199.8, -173.0, 339.6, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
-        code = self._arm.set_position(*[-257.8, -36.1, 338.9, 179.8, 0.3, 172.8], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        code = self._arm.set_position(*[-257.8, -36.1, 338.9, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
-        code = self._arm.set_position(*[-257.8, -36.1, 184.6, 179.8, 0.3, 172.8], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        code = self._arm.set_position(*[-257.8, -36.1, 184.6, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
-        #change z=30 of scalpel, tweezers objects
-        #vendaje -257.8, -36.1, 152.2, 179.8, 0.3, 172.8
         code = self._arm.set_position(*coords_dejar, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
         code = self._arm.open_lite6_gripper()
         if not self._check_code(code, 'open_lite6_gripper'):
             return
-        code = self._arm.set_position(*[-257.8, -36.1, 184.6, 179.8, 0.3, 172.8], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        time.sleep(3)
+        code = self._arm.set_position(*[-257.8, -36.1, 184.6, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
         time.sleep(3)
@@ -966,19 +986,66 @@ class Movimiento(Node):
         code = self._arm.stop_lite6_gripper()
         if not self._check_code(code, 'stop_lite6_gripper'):
             return
-        code = self._arm.set_position(*[-336.9, -268.2, 176.9, 179.6, 0.1, -179.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        code = self._arm.set_position(*[-87.6, -221.3, 263.3, 179.6, 0.1, -0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
         code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
         
+        
     #cut     
     
-    def cut(self,objeto):
+    def cut(self):
         self.get_logger().info(f'Iniciando cut')
         if not self.return_subrutina:
             return
+        
+        # Mover brazo a la posición de inicio
+        code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
+        if not self._check_code(code, 'set_position'):
+                return
+        #abre gripper
+        code = self._arm.open_lite6_gripper() 
+        if not self._check_code(code, 'bring - open_lite6_gripper'):
+            return
+        #posición intermedia
+        code = self._arm.set_position(*[57.8, -189.1, 199.0, 180.0, 0, -92.7], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
+        if not self._check_code(code, 'set_position'):
+                return
+        #arriba": [-336.6, -268.5, 188.1, 179.7, -0.2, -179.2],
+        #abajo": [-336.6, -268.5, 16.7, 179.7, -0.2, -179.2]
+        #mover brazo arriba del objeto
+        code = self._arm.set_position(*[-336.6, -268.5, 188.1, 179.7, -0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#arriba
+        if not self._check_code(code, 'bring - set_position'):
+            return
+        time.sleep(0.5)
+        
+        # Bajar brazo hasta el objeto
+        code = self._arm.set_position(*[-336.6, -268.5, 16.7, 179.7, -0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        if not self._check_code(code, 'bring - set_position'):
+            return
+        time.sleep(0.5)
+       
+        # Cerrar el gripper para agarrar el objeto
+        code = self._arm.close_lite6_gripper()
+        if not self._check_code(code, 'bring - close_lite6_gripper'):
+            return
+        time.sleep(0.5)
+
+        # Subir brazo con el objeto
+        code = self._arm.set_position(*[-336.6, -268.5, 188.1, 179.7, -0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        if not self._check_code(code, 'bring - set_position'):
+            return
+        time.sleep(0.5)
+        # Mover brazo 
+        code = self._arm.set_position(*[-336.6, -176.9, 225.9, 179.7, 0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
+        if not self._check_code(code, 'set_position'):
+                return
+            
+        code = self._arm.set_position(*[38.1, -225.9, 255.4, 178, 1.3, -91.4], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
+        if not self._check_code(code, 'set_position'):
+                return
         
         code = self._arm.set_position(*[228.3, 1.3, 287.7, 179.8, 0.0, 0.3], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
@@ -988,13 +1055,15 @@ class Movimiento(Node):
         
         inicio, fin = coordinates_detection()
         
+        time.sleep(4)
         
-        if not inicio or not fin:
-            self.pprint("Not valid coordinates detected")
-            return
+        # if not inicio or not fin:
+        #     self.pprint("Not valid coordinates detected")
+        #     return
 
-        inicial_pose = [inicio[0],1.5, inicio[2], 180, 0, 0]
-        final_pose = [fin[0], 1.5, fin[2], 180, 0, 0]
+        inicial_pose = [290.4, -6.5, 68.7] #[inicio[0],1.5, inicio[2], 180, 0, 0]
+        final_pose = [380.3, -6.5, 76.9] #[fin[0], 1.5, fin[2], 180, 0, 0]
+
 
         # Move to the beginnig positon
         code = self._arm.set_position(*inicial_pose, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
@@ -1012,6 +1081,29 @@ class Movimiento(Node):
         code = self._arm.set_position(*[199.8, 1.8, 199, 180, 0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
+        
+        code = self._arm.set_servo_angle(angle=[-174.7, 9.9, 31.8, 0, 21.9, -175.7], speed=self._angle_speed, mvacc=self._angle_acc, wait=False, radius=0.0)
+        if not self._check_code(code, 'set_servo_angle'):
+            return
+        code = self._arm.set_position(*[-254.1, -34.7, 64.9, -179.7, -0.2, 1.8], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+        if not self._check_code(code, 'set_position'):
+            return
+        
+        code = self._arm.open_lite6_gripper() 
+        if not self._check_code(code, 'bring - open_lite6_gripper'):
+            return
+        
+        time.sleep(2)
+        
+        code = self._arm.stop_lite6_gripper() 
+        if not self._check_code(code, 'bring - stop_lite6_gripper'):
+            return
+        
+        code = self._arm.set_servo_angle(angle=[-1.2, -5.8, 34.4, -0.4, 40.4, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=False, radius=0.0)
+        if not self._check_code(code, 'set_servo_angle'):
+            return
+        
+        
 
 
 def main(args=None):
