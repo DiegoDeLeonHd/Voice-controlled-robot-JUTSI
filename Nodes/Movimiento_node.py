@@ -30,29 +30,29 @@ def coordinates_detection():
     config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
     profile = pipeline.start(config)
 
-    # Obtener la intrínseca de la cámara color
+    # Obtain the intrinsic of the color camera
     color_stream = profile.get_stream(rs.stream.color)
     color_intrinsics = color_stream.as_video_stream_profile().get_intrinsics()
 
-    def preprocesar_imagen(img_color):
-        gris = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
-        gris = cv2.equalizeHist(gris)
-        gris = cv2.GaussianBlur(gris, (5, 5), 0)
-        return gris
+    def preprocess_image(img_color):#
+        grey = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)#
+        grey = cv2.equalizeHist(grey)
+        grey = cv2.GaussianBlur(grey, (5, 5), 0)
+        return grey
 
-    def detectar_circulo(gris):
-        circulos = cv2.HoughCircles(gris, cv2.HOUGH_GRADIENT, dp=1.2, minDist=100,
+    def detect_circle(grey):#
+        circle = cv2.HoughCircles(grey, cv2.HOUGH_GRADIENT, dp=1.2, minDist=100,#
                                     param1=10, param2=30, minRadius=15, maxRadius=20)
-        if circulos is not None:
-            circulos = np.uint16(np.around(circulos))
-            return circulos[0][0]
+        if circle is not None:
+            circle = np.uint16(np.around(circle))
+            return circle[0][0]
         return None
 
-    def detectar_cuadrado(gris):
-        bordes = cv2.Canny(gris, 13, 13)
-        contornos, _ = cv2.findContours(bordes, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    def detect_sqr(grey):#
+        edges = cv2.Canny(grey, 13, 13)#bordes
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)#contornos, revisar guion bajo
 
-        for cnt in contornos:
+        for cnt in contours:
             epsilon = 0.04 * cv2.arcLength(cnt, True)
             approx = cv2.approxPolyDP(cnt, epsilon, True)
 
@@ -64,10 +64,10 @@ def coordinates_detection():
                     cy = y + h // 2
                     return (cx, cy), approx
         return None, None
-
-    coordenadas_inicio = None
-    coordenadas_fin = None
-    coordenadas_guardadas = False
+    #
+    coords_start = None
+    coords_end = None
+    coords_saved = False
     offset = np.array([86.8, 0, 69.5])
 
     try:
@@ -80,43 +80,43 @@ def coordinates_detection():
                 continue
 
             img_color = np.asanyarray(color_frame.get_data())
-            img_gris = preprocesar_imagen(img_color)
+            img_grey = preprocess_image(img_color)
             img_display = img_color.copy()
 
-            circulo = detectar_circulo(img_gris)
-            cuadrado, contorno = detectar_cuadrado(img_gris)
+            circle = detect_circle(img_grey)
+            square, contour = detect_sqr(img_grey)
 
-            if circulo is not None:
-                x, y, r = circulo
-                cv2.circle(img_display, (x, y), r, (0, 255, 0), 2)
+            if circle is not None:
+                x, y, r = circle
+                cv2.circle(img_display, (x, y), r, (0, 255, 0), 2)#
                 depth_m = depth_frame.get_distance(x, y)
-                coords_circulo_3D = rs.rs2_deproject_pixel_to_point(color_intrinsics, [x, y], depth_m)
-                coords_circulo_3D =[round(coord * 100, 1) for coord in coords_circulo_3D]  # mm
-                coords_circulo_3D_robot = np.array(coords_circulo_3D) + offset
+                coords_circle_3D = rs.rs2_deproject_pixel_to_point(color_intrinsics, [x, y], depth_m)
+                coords_circle_3D =[round(coord * 100, 1) for coord in coords_circle_3D]  # mm
+                coords_circle_3D_robot = np.array(coords_circle_3D) + offset
 
-                if coords_circulo_3D_robot[2] <= 99.3:
+                if coords_circle_3D_robot[2] <= 99.3:
                     thick_offset_start = [10.3,0,34]
-                    coords_circle_tool_3D = np.array(coords_circulo_3D_robot) - thick_offset_start
+                    coords_circle_tool_3D = np.array(coords_circle_3D_robot) - thick_offset_start
                 
-                elif 104.2 > coords_circulo_3D_robot[2] > 99.3:
+                elif 104.2 > coords_circle_3D_robot[2] > 99.3:
                     mid_offset_start = [10.3,0,46.2]
-                    coords_circle_tool_3D = np.array(coords_circulo_3D_robot) - mid_offset_start
+                    coords_circle_tool_3D = np.array(coords_circle_3D_robot) - mid_offset_start
 
-                elif coords_circulo_3D_robot[2] >= 104.2:
+                elif coords_circle_3D_robot[2] >= 104.2:
                     thin_offset_start = [10.3,0,57.8] 
-                    coords_circle_tool_3D = np.array(coords_circulo_3D_robot) - thin_offset_start
+                    coords_circle_tool_3D = np.array(coords_circle_3D_robot) - thin_offset_start
 
-                texto_circulo = f"Inicio: {coords_circle_tool_3D[0]:.1f}, {coords_circle_tool_3D[1]:.1f}, {coords_circle_tool_3D[2]:.1f} mm"
-                cv2.putText(img_display, texto_circulo, (x + 10, y - 20),
+                texto_circle = f"Inicio: {coords_circle_tool_3D[0]:.1f}, {coords_circle_tool_3D[1]:.1f}, {coords_circle_tool_3D[2]:.1f} mm"
+                cv2.putText(img_display, texto_circle, (x + 10, y - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 
-                texto_circulo = f"Inicio: {coords_circulo_3D_robot[0]:.1f}, {coords_circulo_3D_robot[1]:.1f}, {coords_circulo_3D_robot[2]:.1f} mm"
-                cv2.putText(img_display, texto_circulo, (x + 10, y - 20),
+                texto_circle = f"Inicio: {coords_circle_3D_robot[0]:.1f}, {coords_circle_3D_robot[1]:.1f}, {coords_circle_3D_robot[2]:.1f} mm"
+                cv2.putText(img_display, texto_circle, (x + 10, y - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-            if cuadrado is not None:
-                cx, cy = cuadrado
-                cv2.drawContours(img_display, [contorno], -1, (0, 0, 255), 2)
+            if square is not None:
+                cx, cy = square
+                cv2.drawContours(img_display, [contour], -1, (0, 0, 255), 2)
                 depth_m = depth_frame.get_distance(cx, cy)
                 coords_cuadrado_3D = rs.rs2_deproject_pixel_to_point(color_intrinsics, [cx, cy], depth_m)
                 coords_cuadrado_3D = [round(coord * 100, 1) for coord in coords_cuadrado_3D]  # mm
@@ -136,19 +136,19 @@ def coordinates_detection():
                 cv2.putText(img_display, texto_cuadrado, (cx + 10, cy - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-            if circulo is not None and cuadrado is not None and not coordenadas_guardadas:
+            if circle is not None and square is not None and not coords_saved:
                 # coordenadas_inicio = [(364 - coords_circle_tool_3D[0]), 1.5, coords_circle_tool_3D[2]] 
                 # coordenadas_fin = [(458 - coords_square_tool_3D[0]), 1.5, coords_square_tool_3D[2]]
-                coordenadas_inicio = [290.4, -6.5, 68.7] 
-                coordenadas_fin = [380.3, -6.5, 76.9]
+                coords_start = [290.4, -6.5, 68.7] 
+                coords_end = [380.3, -6.5, 76.9]
                 
                 #if coordenadas_inicio[2] >= 42 and coordenadas_inicio[2] <= 60 and coordenadas_fin[2]>=40 and coordenadas_fin[2] <=84: 
-                coordenadas_guardadas = True
+                coords_saved = True
                 print("Coordenadas guardadas:")
-                print(f"Inicio: {coordenadas_inicio}")
-                print(f"Fin: {coordenadas_fin}")
+                print(f"Inicio: {coords_start}")
+                print(f"Fin: {coords_end}")
 
-            if circulo is not None and cuadrado is not None:
+            if circle is not None and square is not None:
                 cv2.line(img_display, (x, y), (cx, cy), (255, 0, 0), 2)
 
             cv2.imshow("Coordinates Detection", img_display)
@@ -158,7 +158,7 @@ def coordinates_detection():
     finally:
         pipeline.stop()
         cv2.destroyAllWindows()
-        return coordenadas_inicio, coordenadas_fin
+        return coords_start, coords_end
 
 class Movimiento(Node):
     def __init__(self, arm):  
