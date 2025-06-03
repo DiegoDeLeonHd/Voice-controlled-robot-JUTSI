@@ -14,21 +14,23 @@ import subprocess
 import signal
 import time 
 
-#Hola a todos 
+# sistema_robot por robot_system "POSIBLE CAMBIO DE NOMBRE DEL PAQUETE, A TOMAR EN CUENTA EN ROS"
 
 model = whisper.load_model("medium")
 
 
-class VozCompletaNode(Node):
+class VoiceNode(Node):
     def __init__(self):
-        super().__init__('voz_comando_node')
+        super().__init__('voice_command_node')
         
-        # Suscriptores
-        self.create_subscription(String, 'retroalimentacion', self.callback_retro, 10)
+        # Subscriber
+        self.create_subscription(String, 'feedback', self.callback_retro, 10)
         
-        self.publisher_ = self.create_publisher(String, 'voz_comando', 10)
+        #Publisher
+        self.publisher_ = self.create_publisher(String, 'voice_command', 10)
         self.start_node("sistema_robot", "vision_node"  )
-        # 📦 Ruta del paquete y subdirectorios internos
+
+        # Package path and internal subdirectories
         package_dir = get_package_share_directory('sistema_robot')
         self.base_dir = os.path.join(package_dir, 'data')
         self.audios_dir = os.path.join(self.base_dir, 'B_Audios')
@@ -37,23 +39,23 @@ class VozCompletaNode(Node):
         os.makedirs(self.audios_dir, exist_ok=True)
         os.makedirs(self.transcribes_dir, exist_ok=True)
 
-        # 🔊 Saludo inicial con gTTS y mpg123
-        self.saludo_inicial()
+        # Initial greeting with gTTS and mpg123
+        self.initial_greeting()
 
         while rclpy.ok():
-            self.get_logger().info("Presiona 'Enter' para iniciar grabación...")
-            input("▶️ Esperando tecla 'Enter'...")
+            self.get_logger().info("Press 'Enter' to start recording...")
+            input("Waiting for 'Enter'...")
             self.grabar_y_procesar()
 
-    def saludo_inicial(self):
-        texto = "Hi, my name is iutsi, your medical assistant. How can I help you today? Please press enter to give me instructions." #, 
-        self.get_logger().info("🔊 Reproduciendo saludo de bienvenida con gTTS y mpg123...")
+    def initial_greeting(self):
+        speech = "Hi, my name is iutsi, your medical assistant. How can I help you today? Please press enter to give me instructions." 
+        self.get_logger().info("Playing welcome greeting with gTTS and mpg123...")
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
-                gTTS(text=texto, lang='en').save(f.name)
+                gTTS(text=speech, lang='en').save(f.name)
                 os.system(f"mpg123 {f.name}")
         except Exception as e:
-            self.get_logger().error(f"❌ Error al reproducir saludo: {e}")
+            self.get_logger().error(f"Error playing greeting: {e}")
             
     def callback_retro(self, msg):
         self.partes_retro = msg.data.split(";")
@@ -196,7 +198,7 @@ class VozCompletaNode(Node):
 def main(args=None):
     
     rclpy.init(args=args)
-    nodo = VozCompletaNode()
+    nodo = VoiceNode()
     rclpy.spin(nodo)
     nodo.destroy_node()
     rclpy.shutdown()
