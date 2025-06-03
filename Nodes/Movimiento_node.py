@@ -171,6 +171,11 @@ class Movimiento(Node):
         self.alive = True
         self._arm = arm
         self._ignore_exit_state = False
+        self.emergency_mode = False
+        self.key_thread = threading.Thread(target=self._keyboard_listener, daemon=True)
+        self.key_thread.start()
+        self.modo_exclusivo = False
+
 
         # Velocidades y aceleraciones (puedes ajustar si quieres)
         self._tcp_speed = 100
@@ -212,41 +217,76 @@ class Movimiento(Node):
         self._robot_init()#cambiar arm por robot si no funciona
         self.get_logger().warn('Nodo movimiento inicializado y robot conectado')
         
-
-    def listen_emergency_key(self):
-        self.get_logger().info("🚨 listen_emergency_key started")
-
-        def getch():
-            fd = sys.stdin.fileno()
-            old_settings = termios.tcgetattr(fd)
-            try:
-                tty.setraw(fd)
+        
+    def _keyboard_listener(self):
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            while True:
                 ch = sys.stdin.read(1)
-            finally:
-                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-            return ch
+                if ch == 'q':
+                    self.get_logger().warn("🟡 Tecla 'q' presionada: ejecutando rutina especial y activando modo exclusivo")
+                    threading.Thread(target=self.mi_rutina_especial, daemon=True).start()
+                    self.modo_exclusivo = True
+                elif ch == 'w':
+                    self.get_logger().info("🟢 Tecla 'w' presionada: desactivando modo exclusivo")
+                    self.modo_exclusivo = False
+        except Exception as e:
+            self.get_logger().error(f"❌ Error en _keyboard_listener: {e}")
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-        self.get_logger().info("🔴 Presiona 'q' para detener el robot inmediatamente.")
-    
-        while True:  # 👈 eliminamos la condición con self.alive
-            try:
-                key = getch().lower()
-                if key == 'q':
-                    self.get_logger().warn("🛑 Botón de emergencia presionado (tecla 'q'). Deteniendo robot.")
-                    self.emergency_stop()
-            except Exception as e:
-                self.get_logger().error(f"Error en listen_emergency_key: {e}")
-
-
-    def emergency_stop(self):
-        # 👇 Ya NO apagamos el nodo ni cambiamos self.alive
-        if hasattr(self._arm, 'emergency_stop'):
-            self._arm.emergency_stop()
+        
+    def mi_rutina_especial(self):
+        self.get_logger().info("🔧 Ejecutando mi rutina especial")
+        #self._arm.move_stop()  # ⛔ Detiene inmediatamente el movimiento actual
+        self.modo_exclusivo = True
+        
+        time.sleep(5)
+        code = self._arm.set_servo_angle(angle=[-129.2, -1.3, 88.9, 0.0, 90.2, 23.9], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
+        if not self._check_code(code, 'set_servo_angle'):
+            return
+        code = self._arm.set_servo_angle(angle=[-173.1, 6.9, 86.6, 0.0, 79.7, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
+        if not self._check_code(code, 'set_servo_angle'):
+            return
+        code = self._arm.set_servo_angle(angle=[-172.8, 13.0, 56.3, 0.5, 43.0, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
+        if not self._check_code(code, 'set_servo_angle'):
+            return
+        code = self._arm.set_servo_angle(angle=[-172.6, 42.1, 53.6, 0.9, 11.3, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
+        if not self._check_code(code, 'set_servo_angle'):
+            return
+        time.sleep(3)
+        code = self._arm.open_lite6_gripper()
+        if not self._check_code(code, 'open_lite6_gripper'):
+            return
+        time.sleep(2)
+        code = self._arm.set_servo_angle(angle=[-172.8, 13.0, 56.3, 0.5, 43.0, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
+        if not self._check_code(code, 'set_servo_angle'):
+            return
+        time.sleep(3)
+        code = self._arm.close_lite6_gripper()
+        if not self._check_code(code, 'close_lite6_gripper'):
+            return
+        code = self._arm.stop_lite6_gripper()
+        if not self._check_code(code, 'stop_lite6_gripper'):
+            return
+        code = self._arm.set_servo_angle(angle=[-112.9, -0.8, 60.7, 0.4, 60.8, -112.6], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
+        if not self._check_code(code, 'set_servo_angle'):
+            return
+        code = self._arm.set_servo_angle(angle=[0.0, -6.9, 38.9, 0.2, 45.9, -0.1], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
+        if not self._check_code(code, 'set_servo_angle'):
+            return
+        if code == 0:
+            self.get_logger().info("✅ Rutina especial completada. Esperando nuevo comando.")
         else:
-            self._arm.motion_enable(False)  # alternativa segura
-    
-        self.get_logger().warn("🚨 Robot detenido por emergencia (nodo sigue activo).")
+            self.get_logger().error("❌ Falló la rutina especial")
+        
+        
+      
+     
 
+    
     
     def _robot_init(self):
         self._arm.clean_warn()
@@ -400,6 +440,11 @@ class Movimiento(Node):
                 
     # SUBRUTINA bring
     def bring(self, objeto):
+        
+        if self.modo_exclusivo:
+            self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina")
+            return
+        
         self.get_logger().info(f'Iniciando bring de {objeto}')
         if not self.return_subrutina:
             return
@@ -412,72 +457,97 @@ class Movimiento(Node):
         coords_abajo = self.coordenadas[objeto]['abajo']
         
         # Mover brazo a la posición de inicio
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
                 return
+            
         #abre gripper
+        if self.modo_exclusivo: return
         code = self._arm.open_lite6_gripper() 
         if not self._check_code(code, 'bring - open_lite6_gripper'):
             return
+        
         #posición intermedia
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[57.8, -189.1, 199.0, 180.0, 0, -92.7], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
                 return
+            
         #mover brazo arriba del objeto
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*coords_arriba, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#arriba
         if not self._check_code(code, 'bring - set_position'):
             return
         time.sleep(0.5)
         
         # Bajar brazo hasta el objeto
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*coords_abajo, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'bring - set_position'):
             return
         time.sleep(2)
        
         # Cerrar el gripper para agarrar el objeto
+        if self.modo_exclusivo: return
         code = self._arm.close_lite6_gripper()
         if not self._check_code(code, 'bring - close_lite6_gripper'):
             return
         time.sleep(2)
 
         # Subir brazo con el objeto
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*coords_arriba, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'bring - set_position'):
             return
-        time.sleep(0.5
-                   )
+        time.sleep(0.5)
+        
         # Mover brazo 
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[-336.6, -176.9, 225.9, 179.7, 0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
-                return        
+                return    
+                
         # Mover brazo para la entrega
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[1.6, -321.3, 192.6, 179.7, -0.2, -78.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
                 return
+            
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[360, 217, 199, -179.7, -0.2, 20.4], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
                 return
         time.sleep(2)
+        
         #abre gripper
+        if self.modo_exclusivo: return
         code = self._arm.open_lite6_gripper() 
         if not self._check_code(code, 'bring - open_lite6_gripper'):
             return
         time.sleep(2)
+        
         #apaga el gripper
+        if self.modo_exclusivo: return
         code = self._arm.stop_lite6_gripper() 
         if not self._check_code(code, 'bring - open_lite6_gripper'):
             return   
         time.sleep(2)
+        
         #movimiento home
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
-                return
+            return
             
     
     # SUBRUTINA bring bandage
-    
     def bring_bandage(self, objeto):
+        
+        if self.modo_exclusivo:
+            self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina")
+            return
+        
         self.get_logger().info(f'Iniciando bring de {objeto}')
         if not self.return_subrutina:
             return
@@ -487,71 +557,109 @@ class Movimiento(Node):
             return
         
         # Mover brazo a la posición de inicio
+        if self.modo_exclusivo: return
         code = self._arm.set_servo_angle(angle=[-1.2, -5.8, 34.4, -0.4, 40.4, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=False, radius=0.0)
         if not self._check_code(code, 'set_servo_angle'):
             return
+        
+        if self.modo_exclusivo: return
         code = self._arm.set_collision_sensitivity(1)
         if not self._check_code(code, 'set_collision_sensitivity'):
             return
         self._tcp_speed = 85
+        
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[-33.2, -211.7, 205.2, -179.8, 0.2, -26.3], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
+        
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[-194.3, -262.2, 165.1, 179.7, 0.2, -164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
         time.sleep(1)
+        
+        if self.modo_exclusivo: return
         code = self._arm.open_lite6_gripper()
         if not self._check_code(code, 'open_lite6_gripper'):
             return
         self._tcp_speed = 5
+        
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[-194.3, -262.2, 147.3, 179.7, 0.2, -164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
         time.sleep(1)
+        
+        if self.modo_exclusivo: return
         code = self._arm.close_lite6_gripper()
         if not self._check_code(code, 'close_lite6_gripper'):
             return
         time.sleep(1)
+        
+        if self.modo_exclusivo: return
         code = self._arm.stop_lite6_gripper()
         if not self._check_code(code, 'stop_lite6_gripper'):
             return
         time.sleep(2)
+        
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[-194.3, -262.2, 126.2, 179.7, 0.2, -164.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
+        
+        if self.modo_exclusivo: return
         code = self._arm.close_lite6_gripper()
         if not self._check_code(code, 'close_lite6_gripper'):
             return
         time.sleep(2)
         self._tcp_speed = 65
+        
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[-196.5, -257.5, 126.2, -179.9, 0.3, -89.6], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
+        
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[-196.5, -257.5, 165.1, -179.9, 0.3, -89.6], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
+        
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[124.6, -301.5, 252.3, -179.8, 0.1, -29.8], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
+        
+        if self.modo_exclusivo: return
         code = self._arm.set_position(*[293.7, 297.5, 199.2, -179.9, -0.1, 43.5], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
         time.sleep(2)
+        
+        if self.modo_exclusivo: return
         code = self._arm.open_lite6_gripper()
         if not self._check_code(code, 'open_lite6_gripper'):
             return
         time.sleep(2)
+        
+        if self.modo_exclusivo: return
         code = self._arm.stop_lite6_gripper()
         if not self._check_code(code, 'stop_lite6_gripper'):
             return
         time.sleep(2)
+        
+        if self.modo_exclusivo: return
         code = self._arm.set_servo_angle(angle=[-1.2, -5.8, 34.4, -0.4, 40.4, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=False, radius=0.0)
         if not self._check_code(code, 'set_servo_angle'):
             return
      
     #SUBRUTINA bind up small
     def bind_small(self, objeto):
+        
+        if self.modo_exclusivo:
+            self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina bring.")
+            return
+        
         self.get_logger().info(f'Iniciando bind de {objeto}')
         if not self.return_subrutina:
             return
@@ -764,6 +872,11 @@ class Movimiento(Node):
         
     #SUBRUTINA bind up big
     def bind_big(self, objeto):
+        
+        if self.modo_exclusivo:
+            self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina bring.")
+            return
+        
         self.get_logger().info(f'Iniciando bind de {objeto}')
         if not self.return_subrutina:
             return
@@ -932,6 +1045,11 @@ class Movimiento(Node):
         
     #Subrutina Take
     def take(self, objeto):
+        
+        if self.modo_exclusivo:
+            self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina bring.")
+            return
+        
         self.get_logger().info(f'Iniciando take de {objeto}')
         if not self.return_subrutina:
             return
@@ -997,6 +1115,11 @@ class Movimiento(Node):
     #cut     
     
     def cut(self):
+        
+        if self.modo_exclusivo:
+            self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina bring.")
+            return
+        
         self.get_logger().info(f'Iniciando cut')
         if not self.return_subrutina:
             return
@@ -1115,8 +1238,6 @@ def main(args=None):
     rclpy.init(args=args)
     node = Movimiento(arm)
     
-    print("🚀 Iniciando hilo listen_emergency_key")
-    threading.Thread(target=node.listen_emergency_key, daemon=True).start()
 
     rclpy.spin(node)
     node.destroy_node()
