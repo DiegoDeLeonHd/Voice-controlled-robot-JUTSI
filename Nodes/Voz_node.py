@@ -14,6 +14,8 @@ import subprocess
 import signal
 import time 
 
+#Hola a todos 
+
 model = whisper.load_model("medium")
 
 
