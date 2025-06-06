@@ -30,29 +30,29 @@ def coordinates_detection():
     config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
     profile = pipeline.start(config)
 
-    # Obtain the intrinsic of the color camera
+    # Obtener la intrínseca de la cámara color
     color_stream = profile.get_stream(rs.stream.color)
     color_intrinsics = color_stream.as_video_stream_profile().get_intrinsics()
 
-    def preprocess_image(img_color):#
-        grey = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)#
-        grey = cv2.equalizeHist(grey)
-        grey = cv2.GaussianBlur(grey, (5, 5), 0)
-        return grey
+    def preprocesar_imagen(img_color):
+        gris = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
+        gris = cv2.equalizeHist(gris)
+        gris = cv2.GaussianBlur(gris, (5, 5), 0)
+        return gris
 
-    def detect_circle(grey):#
-        circle = cv2.HoughCircles(grey, cv2.HOUGH_GRADIENT, dp=1.2, minDist=100,#
+    def detectar_circulo(gris):
+        circulos = cv2.HoughCircles(gris, cv2.HOUGH_GRADIENT, dp=1.2, minDist=100,
                                     param1=10, param2=30, minRadius=15, maxRadius=20)
-        if circle is not None:
-            circle = np.uint16(np.around(circle))
-            return circle[0][0]
+        if circulos is not None:
+            circulos = np.uint16(np.around(circulos))
+            return circulos[0][0]
         return None
 
-    def detect_sqr(grey):#
-        edges = cv2.Canny(grey, 13, 13)#bordes
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)#contornos, revisar guion bajo
+    def detectar_cuadrado(gris):
+        bordes = cv2.Canny(gris, 13, 13)
+        contornos, _ = cv2.findContours(bordes, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        for cnt in contours:
+        for cnt in contornos:
             epsilon = 0.04 * cv2.arcLength(cnt, True)
             approx = cv2.approxPolyDP(cnt, epsilon, True)
 
@@ -64,10 +64,10 @@ def coordinates_detection():
                     cy = y + h // 2
                     return (cx, cy), approx
         return None, None
-    #
-    coords_start = None
-    coords_end = None
-    coords_saved = False
+
+    coordenadas_inicio = None
+    coordenadas_fin = None
+    coordenadas_guardadas = False
     offset = np.array([86.8, 0, 69.5])
 
     try:
@@ -80,43 +80,43 @@ def coordinates_detection():
                 continue
 
             img_color = np.asanyarray(color_frame.get_data())
-            img_grey = preprocess_image(img_color)
+            img_gris = preprocesar_imagen(img_color)
             img_display = img_color.copy()
 
-            circle = detect_circle(img_grey)
-            square, contour = detect_sqr(img_grey)
+            circulo = detectar_circulo(img_gris)
+            cuadrado, contorno = detectar_cuadrado(img_gris)
 
-            if circle is not None:
-                x, y, r = circle
-                cv2.circle(img_display, (x, y), r, (0, 255, 0), 2)#
+            if circulo is not None:
+                x, y, r = circulo
+                cv2.circle(img_display, (x, y), r, (0, 255, 0), 2)
                 depth_m = depth_frame.get_distance(x, y)
-                coords_circle_3D = rs.rs2_deproject_pixel_to_point(color_intrinsics, [x, y], depth_m)
-                coords_circle_3D =[round(coord * 100, 1) for coord in coords_circle_3D]  # mm
-                coords_circle_3D_robot = np.array(coords_circle_3D) + offset
+                coords_circulo_3D = rs.rs2_deproject_pixel_to_point(color_intrinsics, [x, y], depth_m)
+                coords_circulo_3D =[round(coord * 100, 1) for coord in coords_circulo_3D]  # mm
+                coords_circulo_3D_robot = np.array(coords_circulo_3D) + offset
 
-                if coords_circle_3D_robot[2] <= 99.3:
+                if coords_circulo_3D_robot[2] <= 99.3:
                     thick_offset_start = [10.3,0,34]
-                    coords_circle_tool_3D = np.array(coords_circle_3D_robot) - thick_offset_start
+                    coords_circle_tool_3D = np.array(coords_circulo_3D_robot) - thick_offset_start
                 
-                elif 104.2 > coords_circle_3D_robot[2] > 99.3:
+                elif 104.2 > coords_circulo_3D_robot[2] > 99.3:
                     mid_offset_start = [10.3,0,46.2]
-                    coords_circle_tool_3D = np.array(coords_circle_3D_robot) - mid_offset_start
+                    coords_circle_tool_3D = np.array(coords_circulo_3D_robot) - mid_offset_start
 
-                elif coords_circle_3D_robot[2] >= 104.2:
+                elif coords_circulo_3D_robot[2] >= 104.2:
                     thin_offset_start = [10.3,0,57.8] 
-                    coords_circle_tool_3D = np.array(coords_circle_3D_robot) - thin_offset_start
+                    coords_circle_tool_3D = np.array(coords_circulo_3D_robot) - thin_offset_start
 
-                texto_circle = f"Inicio: {coords_circle_tool_3D[0]:.1f}, {coords_circle_tool_3D[1]:.1f}, {coords_circle_tool_3D[2]:.1f} mm"
-                cv2.putText(img_display, texto_circle, (x + 10, y - 20),
+                texto_circulo = f"Inicio: {coords_circle_tool_3D[0]:.1f}, {coords_circle_tool_3D[1]:.1f}, {coords_circle_tool_3D[2]:.1f} mm"
+                cv2.putText(img_display, texto_circulo, (x + 10, y - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 
-                texto_circle = f"Inicio: {coords_circle_3D_robot[0]:.1f}, {coords_circle_3D_robot[1]:.1f}, {coords_circle_3D_robot[2]:.1f} mm"
-                cv2.putText(img_display, texto_circle, (x + 10, y - 20),
+                texto_circulo = f"Inicio: {coords_circulo_3D_robot[0]:.1f}, {coords_circulo_3D_robot[1]:.1f}, {coords_circulo_3D_robot[2]:.1f} mm"
+                cv2.putText(img_display, texto_circulo, (x + 10, y - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-            if square is not None:
-                cx, cy = square
-                cv2.drawContours(img_display, [contour], -1, (0, 0, 255), 2)
+            if cuadrado is not None:
+                cx, cy = cuadrado
+                cv2.drawContours(img_display, [contorno], -1, (0, 0, 255), 2)
                 depth_m = depth_frame.get_distance(cx, cy)
                 coords_cuadrado_3D = rs.rs2_deproject_pixel_to_point(color_intrinsics, [cx, cy], depth_m)
                 coords_cuadrado_3D = [round(coord * 100, 1) for coord in coords_cuadrado_3D]  # mm
@@ -136,19 +136,19 @@ def coordinates_detection():
                 cv2.putText(img_display, texto_cuadrado, (cx + 10, cy - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-            if circle is not None and square is not None and not coords_saved:
+            if circulo is not None and cuadrado is not None and not coordenadas_guardadas:
                 # coordenadas_inicio = [(364 - coords_circle_tool_3D[0]), 1.5, coords_circle_tool_3D[2]] 
                 # coordenadas_fin = [(458 - coords_square_tool_3D[0]), 1.5, coords_square_tool_3D[2]]
-                coords_start = [290.4, -6.5, 68.7] 
-                coords_end = [380.3, -6.5, 76.9]
+                coordenadas_inicio = [290.4, -6.5, 68.7] 
+                coordenadas_fin = [380.3, -6.5, 76.9]
                 
                 #if coordenadas_inicio[2] >= 42 and coordenadas_inicio[2] <= 60 and coordenadas_fin[2]>=40 and coordenadas_fin[2] <=84: 
-                coords_saved = True
+                coordenadas_guardadas = True
                 print("Coordenadas guardadas:")
-                print(f"Inicio: {coords_start}")
-                print(f"Fin: {coords_end}")
+                print(f"Inicio: {coordenadas_inicio}")
+                print(f"Fin: {coordenadas_fin}")
 
-            if circle is not None and square is not None:
+            if circulo is not None and cuadrado is not None:
                 cv2.line(img_display, (x, y), (cx, cy), (255, 0, 0), 2)
 
             cv2.imshow("Coordinates Detection", img_display)
@@ -158,14 +158,14 @@ def coordinates_detection():
     finally:
         pipeline.stop()
         cv2.destroyAllWindows()
-        return coords_start, coords_end
+        return coordenadas_inicio, coordenadas_fin
 
 class Movimiento(Node):
     def __init__(self, arm):  
-        super().__init__('movimiento')  
+        super().__init__('movement')  
         
         # Suscripción al tópico voz_comando
-        self.subscription = self.create_subscription(String,'voz_comando',self.callback_voz,10)
+        self.subscription = self.create_subscription(String,'voice_command',self.callback_voz,10)
        
         #Variables de estado
         self.alive = True
@@ -216,72 +216,153 @@ class Movimiento(Node):
         # Inicializar el robot (limpieza, callbacks, etc)
         self._robot_init()#cambiar arm por robot si no funciona
         self.get_logger().warn('Nodo movimiento inicializado y robot conectado')
-        
-        
+    
+    
+ 
+ 
     def _keyboard_listener(self):
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
-            tty.setraw(sys.stdin.fileno())
+            tty.setraw(fd)
             while True:
                 ch = sys.stdin.read(1)
                 if ch == 'q':
-                    self.get_logger().warn("🟡 Tecla 'q' presionada: ejecutando rutina especial y activando modo exclusivo")
-                    threading.Thread(target=self.mi_rutina_especial, daemon=True).start()
+                    self.get_logger().warn("🟡 Tecla 'q' presionada: CANCELANDO todo y ejecutando rutina especial")
+                    
+                    self._arm.set_pause_time(0)
+                    self._arm.set_state(4)  # ⛔ Detener
+
                     self.modo_exclusivo = True
+
+                    threading.Thread(target=self.mi_rutina_especial, daemon=True).start()
+
                 elif ch == 'w':
-                    self.get_logger().info("🟢 Tecla 'w' presionada: desactivando modo exclusivo")
+                    self.get_logger().info("🟢 Tecla 'w' presionada: saliendo de modo exclusivo")
+
                     self.modo_exclusivo = False
-        except Exception as e:
-            self.get_logger().error(f"❌ Error en _keyboard_listener: {e}")
+                    self._arm.set_mode(0)
+                    self._arm.set_state(0)
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-        
+
+    def safe_move(self, coords, label):
+        if self.modo_exclusivo:
+            self.get_logger().warn(f"⛔ {label} cancelado: modo exclusivo activo antes de iniciar movimiento")
+            return False
+
+        code = self._arm.set_position(*coords, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=False)
+        if code != 0:
+            self.get_logger().error(f"❌ Error en {label}: código {code}")
+            return False
+
+        while self._arm.get_is_moving():
+            if self.modo_exclusivo:
+                self.get_logger().warn(f"🛑 Cancelando '{label}' en movimiento por emergencia")
+                self._arm.set_pause_time(0)
+                self._arm.set_state(4)
+                return False
+            time.sleep(0.05)
+
+        return True
+
+
     def mi_rutina_especial(self):
         self.get_logger().info("🔧 Ejecutando mi rutina especial")
-        #self._arm.move_stop()  # ⛔ Detiene inmediatamente el movimiento actual
+
+        # Poner en modo exclusivo y detener todo
+        self._arm.set_pause_time(0)
+        self._arm.set_state(4)
         self.modo_exclusivo = True
-        
-        time.sleep(5)
+        time.sleep(1)
+
+        # Reactivar el brazo antes de comenzar
+        self._arm.set_mode(0)
+        self._arm.set_state(0)
+        time.sleep(0.5)
+
+        # Paso 1
+        self.get_logger().info("🟢 Paso 1")
+        self._arm.set_mode(0)
+        self._arm.set_state(0)
+        time.sleep(0.1)
         code = self._arm.set_servo_angle(angle=[-129.2, -1.3, 88.9, 0.0, 90.2, 23.9], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
-        if not self._check_code(code, 'set_servo_angle'):
-            return
+        if not self._check_code(code, 'Paso 1'): return
+
+        # Paso 2
+        self.get_logger().info("🟢 Paso 2")
+        self._arm.set_mode(0)
+        self._arm.set_state(0)
+        time.sleep(0.1)
         code = self._arm.set_servo_angle(angle=[-173.1, 6.9, 86.6, 0.0, 79.7, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
-        if not self._check_code(code, 'set_servo_angle'):
-            return
+        if not self._check_code(code, 'Paso 2'): return
+
+        # Paso 3
+        self.get_logger().info("🟢 Paso 3")
+        self._arm.set_mode(0)
+        self._arm.set_state(0)
+        time.sleep(0.1)
         code = self._arm.set_servo_angle(angle=[-172.8, 13.0, 56.3, 0.5, 43.0, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
-        if not self._check_code(code, 'set_servo_angle'):
-            return
+        if not self._check_code(code, 'Paso 3'): return
+
+        # Paso 4
+        self.get_logger().info("🟢 Paso 4")
+        self._arm.set_mode(0)
+        self._arm.set_state(0)
+        time.sleep(0.1)
         code = self._arm.set_servo_angle(angle=[-172.6, 42.1, 53.6, 0.9, 11.3, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
-        if not self._check_code(code, 'set_servo_angle'):
-            return
-        time.sleep(3)
-        code = self._arm.open_lite6_gripper()
-        if not self._check_code(code, 'open_lite6_gripper'):
-            return
+        if not self._check_code(code, 'Paso 4'): return
+
+        # Pausa
         time.sleep(2)
+
+        # Paso 5: abrir gripper
+        self.get_logger().info("🟢 Paso 5: abrir gripper")
+        code = self._arm.open_lite6_gripper()
+        if not self._check_code(code, 'Paso 5 - abrir gripper'): return
+        time.sleep(1.5)
+
+        # Paso 6: volver a Paso 3
+        self.get_logger().info("🟢 Paso 6: volver a Paso 3")
+        self._arm.set_mode(0)
+        self._arm.set_state(0)
+        time.sleep(0.1)
         code = self._arm.set_servo_angle(angle=[-172.8, 13.0, 56.3, 0.5, 43.0, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
-        if not self._check_code(code, 'set_servo_angle'):
-            return
-        time.sleep(3)
+        if not self._check_code(code, 'Paso 6'): return
+        time.sleep(1.5)
+
+        # Paso 7: cerrar gripper
+        self.get_logger().info("🟢 Paso 7: cerrar gripper")
         code = self._arm.close_lite6_gripper()
-        if not self._check_code(code, 'close_lite6_gripper'):
-            return
+        if not self._check_code(code, 'Paso 7 - cerrar gripper'): return
+        time.sleep(1)
+
+        # Paso 8: detener gripper
+        self.get_logger().info("🟢 Paso 8: detener gripper")
         code = self._arm.stop_lite6_gripper()
-        if not self._check_code(code, 'stop_lite6_gripper'):
-            return
+        if not self._check_code(code, 'Paso 8 - detener gripper'): return
+        time.sleep(1)
+
+        # Paso 9: mover a posición final 1
+        self.get_logger().info("🟢 Paso 9")
+        self._arm.set_mode(0)
+        self._arm.set_state(0)
+        time.sleep(0.1)
         code = self._arm.set_servo_angle(angle=[-112.9, -0.8, 60.7, 0.4, 60.8, -112.6], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
-        if not self._check_code(code, 'set_servo_angle'):
-            return
+        if not self._check_code(code, 'Paso 9'): return
+
+        # Paso 10: posición final 2
+        self.get_logger().info("🟢 Paso 10")
+        self._arm.set_mode(0)
+        self._arm.set_state(0)
+        time.sleep(0.1)
         code = self._arm.set_servo_angle(angle=[0.0, -6.9, 38.9, 0.2, 45.9, -0.1], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
-        if not self._check_code(code, 'set_servo_angle'):
-            return
-        if code == 0:
-            self.get_logger().info("✅ Rutina especial completada. Esperando nuevo comando.")
-        else:
-            self.get_logger().error("❌ Falló la rutina especial")
-        
+        if not self._check_code(code, 'Paso 10'): return
+
+        # Final
+        self.get_logger().info("✅ Rutina especial completada correctamente")
+            
         
       
      
@@ -438,13 +519,13 @@ class Movimiento(Node):
             except Exception as e:
                 self.get_logger().error(f"❌ Error al reproducir saludo: {e}")  
                 
-    # SUBRUTINA bring
+                
+                    
     def bring(self, objeto):
-        
         if self.modo_exclusivo:
             self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina")
             return
-        
+
         self.get_logger().info(f'Iniciando bring de {objeto}')
         if not self.return_subrutina:
             return
@@ -455,89 +536,71 @@ class Movimiento(Node):
 
         coords_arriba = self.coordenadas[objeto]['arriba']
         coords_abajo = self.coordenadas[objeto]['abajo']
-        
-        # Mover brazo a la posición de inicio
-        if self.modo_exclusivo: return
-        code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
-        if not self._check_code(code, 'set_position'):
-                return
-            
-        #abre gripper
-        if self.modo_exclusivo: return
-        code = self._arm.open_lite6_gripper() 
+
+        if not self.safe_move([199.8, 1.8, 199.0, 180.0, 0.0, 0.2], 'bring - home'):
+            return
+
+        if self.modo_exclusivo:
+            return
+
+        code = self._arm.open_lite6_gripper()
         if not self._check_code(code, 'bring - open_lite6_gripper'):
             return
-        
-        #posición intermedia
-        if self.modo_exclusivo: return
-        code = self._arm.set_position(*[57.8, -189.1, 199.0, 180.0, 0, -92.7], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
-        if not self._check_code(code, 'set_position'):
-                return
-            
-        #mover brazo arriba del objeto
-        if self.modo_exclusivo: return
-        code = self._arm.set_position(*coords_arriba, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#arriba
-        if not self._check_code(code, 'bring - set_position'):
+
+        if not self.safe_move([57.8, -189.1, 199.0, 180.0, 0, -92.7], 'bring - intermedio'):
             return
+
+        if not self.safe_move(coords_arriba, 'bring - coords_arriba'):
+            return
+
         time.sleep(0.5)
-        
-        # Bajar brazo hasta el objeto
-        if self.modo_exclusivo: return
-        code = self._arm.set_position(*coords_abajo, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-        if not self._check_code(code, 'bring - set_position'):
+
+        if not self.safe_move(coords_abajo, 'bring - coords_abajo'):
             return
+
         time.sleep(2)
-       
-        # Cerrar el gripper para agarrar el objeto
-        if self.modo_exclusivo: return
+
+        if self.modo_exclusivo:
+            return
+
         code = self._arm.close_lite6_gripper()
         if not self._check_code(code, 'bring - close_lite6_gripper'):
             return
+
         time.sleep(2)
 
-        # Subir brazo con el objeto
-        if self.modo_exclusivo: return
-        code = self._arm.set_position(*coords_arriba, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-        if not self._check_code(code, 'bring - set_position'):
+        if not self.safe_move(coords_arriba, 'bring - levantar objeto'):
             return
+
         time.sleep(0.5)
-        
-        # Mover brazo 
-        if self.modo_exclusivo: return
-        code = self._arm.set_position(*[-336.6, -176.9, 225.9, 179.7, 0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
-        if not self._check_code(code, 'set_position'):
-                return    
-                
-        # Mover brazo para la entrega
-        if self.modo_exclusivo: return
-        code = self._arm.set_position(*[1.6, -321.3, 192.6, 179.7, -0.2, -78.1], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
-        if not self._check_code(code, 'set_position'):
-                return
-            
-        if self.modo_exclusivo: return
-        code = self._arm.set_position(*[360, 217, 199, -179.7, -0.2, 20.4], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
-        if not self._check_code(code, 'set_position'):
-                return
-        time.sleep(2)
-        
-        #abre gripper
-        if self.modo_exclusivo: return
-        code = self._arm.open_lite6_gripper() 
-        if not self._check_code(code, 'bring - open_lite6_gripper'):
+
+        if not self.safe_move([-336.6, -176.9, 225.9, 179.7, 0.2, -179.2], 'bring - mov1'):
             return
+
+        if not self.safe_move([1.6, -321.3, 192.6, 179.7, -0.2, -78.1], 'bring - mov2'):
+            return
+
+        if not self.safe_move([360, 217, 199, -179.7, -0.2, 20.4], 'bring - entrega'):
+            return
+
         time.sleep(2)
-        
-        #apaga el gripper
-        if self.modo_exclusivo: return
-        code = self._arm.stop_lite6_gripper() 
-        if not self._check_code(code, 'bring - open_lite6_gripper'):
-            return   
+
+        if self.modo_exclusivo:
+            return
+
+        code = self._arm.open_lite6_gripper()
+        if not self._check_code(code, 'bring - open_lite6_gripper final'):
+            return
+
         time.sleep(2)
-        
-        #movimiento home
-        if self.modo_exclusivo: return
-        code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
-        if not self._check_code(code, 'set_position'):
+
+        code = self._arm.stop_lite6_gripper()
+        if not self._check_code(code, 'bring - stop_lite6_gripper'):
+            return
+
+        time.sleep(2)
+
+        if not self.safe_move([199.8, 1.8, 199.0, 180.0, 0.0, 0.2], 'bring - regreso a home'):
             return
             
     
@@ -1084,34 +1147,70 @@ class Movimiento(Node):
         code = self._arm.set_position(*[-257.8, -36.1, 338.9, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
-        code = self._arm.set_position(*[-257.8, -36.1, 184.6, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-        if not self._check_code(code, 'set_position'):
-            return
-        code = self._arm.set_position(*coords_dejar, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-        if not self._check_code(code, 'set_position'):
-            return
-        code = self._arm.open_lite6_gripper()
-        if not self._check_code(code, 'open_lite6_gripper'):
-            return
-        time.sleep(3)
-        code = self._arm.set_position(*[-257.8, -36.1, 184.6, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-        if not self._check_code(code, 'set_position'):
-            return
-        time.sleep(3)
-        code = self._arm.close_lite6_gripper()
-        if not self._check_code(code, 'close_lite6_gripper'):
-            return
-        code = self._arm.stop_lite6_gripper()
-        if not self._check_code(code, 'stop_lite6_gripper'):
-            return
-        code = self._arm.set_position(*[-87.6, -221.3, 263.3, 179.6, 0.1, -0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-        if not self._check_code(code, 'set_position'):
-            return
-        code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
-        if not self._check_code(code, 'set_position'):
-            return
         
+        #Bandage to bandage-holder
         
+        if objeto == "bandage": 
+            self._tcp_speed = 30
+            code = self._arm.set_position(*[-383.0, -31.7, 250.0, -179.7, -0.3, 0.5], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=False)
+            if not self._check_code(code, 'set_position'):
+                return
+            time.sleep(1)
+            code = self._arm.set_position(*[-383.0, -31.7, 158.8, -179.7, -0.3, 0.5], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            time.sleep(1)
+            code = self._arm.set_servo_angle(angle=[-176.1, 66.9, 132.1, 0.0, 65.3, -176.3], speed=self._angle_speed, mvacc=self._angle_acc, wait=True, radius=0.0)
+            if not self._check_code(code, 'set_servo_angle'):
+                return
+            time.sleep(1)
+            code = self._arm.stop_lite6_gripper()
+            if not self._check_code(code, 'stop_lite6_gripper'):
+                return
+            time.sleep(1)
+            code = self._arm.set_position(*[-421.9, -31.5, 193.6, -179.7, -0.3, 0.6], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            time.sleep(1)
+            self._tcp_speed = 60
+            code = self._arm.set_position(*[-257.8, -36.1, 184.6, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            code = self._arm.set_position(*[-87.6, -221.3, 263.3, 179.6, 0.1, -0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            
+        else: 
+            code = self._arm.set_position(*[-257.8, -36.1, 184.6, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            code = self._arm.set_position(*coords_dejar, speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            code = self._arm.open_lite6_gripper()
+            if not self._check_code(code, 'open_lite6_gripper'):
+                return
+            time.sleep(3)
+            code = self._arm.set_position(*[-257.8, -36.1, 184.6, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            time.sleep(3)
+            code = self._arm.close_lite6_gripper()
+            if not self._check_code(code, 'close_lite6_gripper'):
+                return
+            code = self._arm.stop_lite6_gripper()
+            if not self._check_code(code, 'stop_lite6_gripper'):
+                return
+            code = self._arm.set_position(*[-87.6, -221.3, 263.3, 179.6, 0.1, -0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+            code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
+            if not self._check_code(code, 'set_position'):
+                return
+         
     #cut     
     
     def cut(self):
@@ -1242,6 +1341,3 @@ def main(args=None):
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
-
-
-    #hola
