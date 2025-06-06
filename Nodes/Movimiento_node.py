@@ -30,7 +30,7 @@ def coordinates_detection():
     config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
     profile = pipeline.start(config)
 
-    # Obtener la intrínseca de la cámara color
+    # Obtains the intrinsic of the color camera
     color_stream = profile.get_stream(rs.stream.color)
     color_intrinsics = color_stream.as_video_stream_profile().get_intrinsics()
 
@@ -374,18 +374,18 @@ class Movimiento(Node):
     def _error_warn_changed_callback(self, data):
         if data and data['error_code'] != 0:
             self.alive = False
-            self.pprint(f'Error detectado: err={data["error_code"]}, quit')
+            self.pprint(f'Error detected: err={data["error_code"]}, quit')
             self._arm.release_error_warn_changed_callback(self._error_warn_changed_callback)
 
     def _state_changed_callback(self, data):
         if not self._ignore_exit_state and data and data['state'] == 4:
             self.alive = False
-            self.pprint('Estado 4 detectado, quit')
+            self.pprint('State 4 detected, quit')
             self._arm.release_state_changed_callback(self._state_changed_callback)
 
     def _count_changed_callback(self, data):
         if self.is_alive:
-            self.pprint(f'Contador: {data["count"]}')
+            self.pprint(f'Count: {data["count"]}')
 
     def _check_code(self, code, label):
         if not self.is_alive or code != 0:
@@ -430,101 +430,99 @@ class Movimiento(Node):
             return False
 
     def callback_voz(self, msg):
-        instruccion = msg.data.strip()
-        self.get_logger().info(f'Recibida instrucción: {instruccion}')
+        instruction = msg.data.strip()
+        self.get_logger().info(f'Instruction received: {instruction}')
 
-        partes = instruccion.split(";")
-        if len(partes) < 2:
-            self.get_logger().warn('Instrucción incompleta.')
+        parts = instruction.split(";")
+        if len(parts) < 2:
+            self.get_logger().warn('Instruction incomplete.')
             return
 
-        accion = partes[0]
-        objeto = partes[1]
+        action = parts[0]
+        object = parts[1]
 
-        if accion == 'bring':
-            #self.bring(objeto)
-            speach = f"Bringing the {objeto}, please receive it in the designated area."
-            self.get_logger().info("🔊 Reproduciendo mensaje con gTTS y mpg123...")
+        if action == 'bring':
+            #self.bring(object)
+            speach = f"Bringing the {object}, please receive it in the designated area."
+            self.get_logger().info("🔊 Playing message with gTTS and mpg123...")
             try:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
                     gTTS(text=speach, lang='en').save(f.name)
                     os.system(f"mpg123 {f.name}")
             except Exception as e:
-                self.get_logger().error(f"❌ Error al reproducir saludo: {e}")
+                self.get_logger().error(f"❌ Error playing message: {e}")
         
-            if objeto == "bandage":
-                self.bring_bandage(objeto)
+            if object == "bandage":
+                self.bring_bandage(object)
             else:
-                self.bring(objeto)
+                self.bring(object)
          
              
-        elif accion == 'take':
-            #self.take(objeto)
-            speach = f"I will take the {objeto} to the area for contaminated tools, please deliver it in the designated area and restock when possible."
-            self.get_logger().info("🔊 Reproduciendo mensaje con gTTS y mpg123...")
+        elif action == 'take':
+            #self.take(object)
+            speach = f"I will take the {object} to the area for contaminated tools, please deliver it in the designated area and restock when possible."
+            self.get_logger().info("🔊 Playing message with gTTS and mpg123...")
             try:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
                     gTTS(text=speach, lang='en').save(f.name)
                     os.system(f"mpg123 {f.name}")
             except Exception as e:
-                self.get_logger().error(f"❌ Error al reproducir saludo: {e}")
-            self.take(objeto)
+                self.get_logger().error(f"❌ Error playing message: {e}")
+            self.take(object)
                 
-        elif accion == 'cut':
-            #self.cut(objeto)
+        elif action == 'cut':
+            #self.cut(object)
             speach = "Please, make sure the arm is on the designated area, and has the start and ending points marked.  The robot will start the cut in a phew seconds,  press stop in case of emergency"
-            self.get_logger().info("🔊 Reproduciendo...")
+            self.get_logger().info("🔊 Playing message...")
             try:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
                     gTTS(text=speach, lang='en').save(f.name)
                     os.system(f"mpg123 {f.name}")
             except Exception as e:
-                self.get_logger().error(f"❌ Error al reproducir saludo: {e}")
+                self.get_logger().error(f"❌ Error playing message: {e}")
             self.cut()
             
-        elif accion == 'bind up':
-            #self.bind_up(objeto)
+        elif action == 'bind up':
+            #self.bind_up(object)
             speach = "For this action please place your arm on the holder, and make sure your wrist is aligning with the bandage.   Don't move your hand and keep it open with the palm towards the ceiling, your fingers must be fully extended.  The robot will start shortly."
-            self.get_logger().info("🔊 Reproduciendo mensaje...")
+            self.get_logger().info("🔊 Playing message...")
             try:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
                     gTTS(text=speach, lang='en').save(f.name)
                     os.system(f"mpg123 {f.name}")
             except Exception as e:
-                self.get_logger().error(f"❌ Error al reproducir saludo: {e}")
-            if objeto == "small":
-                self.bind_small(objeto)
-            elif objeto == "big":
-                self.bind_big(objeto)    
+                self.get_logger().error(f"❌ Error playing message: {e}")
+            if object == "small":
+                self.bind_small(object)
+            elif object == "big":
+                self.bind_big(object)    
             
         else:
-            self.get_logger().warn(f'Acción no reconocida: {accion}')
+            self.get_logger().warn(f'Unrecognized action: {action}')
             speach = "Unknown command"
-            self.get_logger().info("🔊 Reproduciendo...")
+            self.get_logger().info("🔊 Playing message...")
             try:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
                     gTTS(text=speach, lang='en').save(f.name)
                     os.system(f"mpg123 {f.name}")
             except Exception as e:
-                self.get_logger().error(f"❌ Error al reproducir saludo: {e}")  
-                
-                
+                self.get_logger().error(f"❌ Error playing message: {e}")    
                     
-    def bring(self, objeto):
+    def bring(self, object):
         if self.exclusive_mode:
-            self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina")
+            self.get_logger().warn("🛑 Exclusive mode active. Canceling routine")
             return
 
-        self.get_logger().info(f'Iniciando bring de {objeto}')
+        self.get_logger().info(f'Initiating bring de {object}')
         if not self.return_subroutine:
             return
 
-        if objeto not in self.coordinates:
-            self.get_logger().error(f'Coordinates not defined for: {objeto}')
+        if object not in self.coordinates:
+            self.get_logger().error(f'Coordinates not defined for: {object}')
             return
 
-        coords_up = self.coordinates[objeto]['up']
-        coords_down = self.coordinates[objeto]['down']
+        coords_up = self.coordinates[object]['up']
+        coords_down = self.coordinates[object]['down']
 
         if not self.safe_move([199.8, 1.8, 199.0, 180.0, 0.0, 0.2], 'bring - home'):
             return
@@ -558,7 +556,7 @@ class Movimiento(Node):
 
         time.sleep(2)
 
-        if not self.safe_move(coords_up, 'bring - levantar objeto'):
+        if not self.safe_move(coords_up, 'bring - lift up object'):
             return
 
         time.sleep(0.5)
@@ -569,7 +567,7 @@ class Movimiento(Node):
         if not self.safe_move([1.6, -321.3, 192.6, 179.7, -0.2, -78.1], 'bring - mov2'):
             return
 
-        if not self.safe_move([360, 217, 199, -179.7, -0.2, 20.4], 'bring - entrega'):
+        if not self.safe_move([360, 217, 199, -179.7, -0.2, 20.4], 'bring - deliver'):
             return
 
         time.sleep(2)
@@ -589,26 +587,25 @@ class Movimiento(Node):
 
         time.sleep(2)
 
-        if not self.safe_move([199.8, 1.8, 199.0, 180.0, 0.0, 0.2], 'bring - regreso a home'):
+        if not self.safe_move([199.8, 1.8, 199.0, 180.0, 0.0, 0.2], 'bring - return to home'):
             return
             
-    
-    # SUBRUTINA bring bandage
-    def bring_bandage(self, objeto):
+    #SUBROUTINE bring bandage
+    def bring_bandage(self, object):
         
         if self.exclusive_mode:
-            self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina")
+            self.get_logger().warn("Exclusive mode active. Canceling routine")
             return
         
-        self.get_logger().info(f'Iniciando bring de {objeto}')
+        self.get_logger().info(f'Initiating bring of {object}')
         if not self.return_subroutine:
             return
 
-        if objeto not in self.coordinates:
-            self.get_logger().error(f'Coordinates not defined for: {objeto}')
+        if object not in self.coordinates:
+            self.get_logger().error(f'Coordinates not defined for: {object}')
             return
         
-        # Mover brazo a la posición de start
+        # Move arm to start position
         if self.exclusive_mode: return
         code = self._arm.set_servo_angle(angle=[-1.2, -5.8, 34.4, -0.4, 40.4, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=False, radius=0.0)
         if not self._check_code(code, 'set_servo_angle'):
@@ -705,19 +702,19 @@ class Movimiento(Node):
         if not self._check_code(code, 'set_servo_angle'):
             return
      
-    #SUBRUTINA bind up small
-    def bind_small(self, objeto):
+    #SUBROUTINE bind up small
+    def bind_small(self, object):
         
         if self.exclusive_mode:
-            self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina bring.")
+            self.get_logger().warn("Exclusive mode active. Canceling routine.")
             return
         
-        self.get_logger().info(f'Iniciando bind de {objeto}')
+        self.get_logger().info(f'Starting bind up for {object}')
         if not self.return_subroutine:
             return
 
-        if objeto not in self.coordinates:
-            self.get_logger().error(f'Coordinates not defined for: {objeto}')
+        if object not in self.coordinates:
+            self.get_logger().error(f'Coordinates not defined for: {object}')
             return
        
         code = self._arm.set_collision_sensitivity(2)
@@ -919,22 +916,20 @@ class Movimiento(Node):
         code = self._arm.set_position(*[380.0, -7.6, 311.3, -88.8, 0.4, -90.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=False)
         if not self._check_code(code, 'set_position'):
             return
-    
-    
-        
-    #SUBRUTINA bind up big
-    def bind_big(self, objeto):
+     
+    #SUBROUTINE bind up big
+    def bind_big(self, object):
         
         if self.exclusive_mode:
-            self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina bring.")
+            self.get_logger().warn("Exclusive mode active. Canceling routine.")
             return
         
-        self.get_logger().info(f'Iniciando bind de {objeto}')
+        self.get_logger().info(f'Initiating bind for {object}')
         if not self.return_subroutine:
             return
 
-        if objeto not in self.coordinates:
-            self.get_logger().error(f'Coordinates not defined for: {objeto}')
+        if object not in self.coordinates:
+            self.get_logger().error(f'Coordinates not defined for: {object}')
             return
         
         code = self._arm.set_servo_angle(angle=[-1.2, -5.8, 34.4, -0.4, 40.4, 0.0], speed=self._angle_speed, mvacc=self._angle_acc, wait=False, radius=0.0)
@@ -1095,22 +1090,22 @@ class Movimiento(Node):
             if interval < 0.01:
                 time.sleep(0.01 - interval)
         
-    #Subrutina Take
-    def take(self, objeto):
+    #SUBROUTINE Take
+    def take(self, object):
         
         if self.exclusive_mode:
-            self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina bring.")
+            self.get_logger().warn("Exclusive mode active. Canceling routine.")
             return
         
-        self.get_logger().info(f'Iniciando take de {objeto}')
+        self.get_logger().info(f'Initiating take of {object}')
         if not self.return_subroutine:
             return
 
-        if objeto not in self.coordinates:
-            self.get_logger().error(f'Coordinates not defined for: {objeto}')
+        if object not in self.coordinates:
+            self.get_logger().error(f'Coordinates not defined for: {object}')
             return
         
-        coords_leave = self.coordinates[objeto]['leave']
+        coords_leave = self.coordinates[object]['leave']
         #take bandag real
     
         code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
@@ -1139,7 +1134,7 @@ class Movimiento(Node):
         
         #Bandage to bandage-holder
         
-        if objeto == "bandage": 
+        if object == "bandage": 
             self._tcp_speed = 30
             code = self._arm.set_position(*[-383.0, -31.7, 250.0, -179.7, -0.3, 0.5], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=False)
             if not self._check_code(code, 'set_position'):
@@ -1200,27 +1195,22 @@ class Movimiento(Node):
             if not self._check_code(code, 'set_position'):
                 return
          
-    #cut     
-    
+    #SUBROUTINE Cut     
     def cut(self):
         
         if self.exclusive_mode:
-            self.get_logger().warn("🛑 Modo exclusivo activo. Cancelando rutina bring.")
+            self.get_logger().warn("Exclusive mode active. Canceling routine.")
             return
         
-        self.get_logger().info(f'Iniciando cut')
+        self.get_logger().info(f'Initiating cut')
         if not self.return_subroutine:
             return
-        
-        # Mover brazo a la posición de start
         code = self._arm.set_position(*[199.8, 1.8, 199.0, 180.0, 0.0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
                 return
-        #abre gripper
         code = self._arm.open_lite6_gripper() 
         if not self._check_code(code, 'bring - open_lite6_gripper'):
             return
-        #posición intermedia
         code = self._arm.set_position(*[57.8, -189.1, 199.0, 180.0, 0, -92.7], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
                 return
@@ -1231,42 +1221,33 @@ class Movimiento(Node):
         if not self._check_code(code, 'bring - set_position'):
             return
         time.sleep(0.5)
-        
-        # Bajar brazo hasta el objeto
         code = self._arm.set_position(*[-336.6, -268.5, 16.7, 179.7, -0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'bring - set_position'):
             return
         time.sleep(0.5)
-       
-        # Cerrar el gripper para agarrar el objeto
         code = self._arm.close_lite6_gripper()
         if not self._check_code(code, 'bring - close_lite6_gripper'):
             return
         time.sleep(0.5)
-
-        # Subir brazo con el objeto
         code = self._arm.set_position(*[-336.6, -268.5, 188.1, 179.7, -0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'bring - set_position'):
             return
         time.sleep(0.5)
-        # Mover brazo 
         code = self._arm.set_position(*[-336.6, -176.9, 225.9, 179.7, 0.2, -179.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
                 return
-            
         code = self._arm.set_position(*[38.1, -225.9, 255.4, 178, 1.3, -91.4], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)#home
         if not self._check_code(code, 'set_position'):
                 return
         
+        #Move to scanning zone
         code = self._arm.set_position(*[228.3, 1.3, 287.7, 179.8, 0.0, 0.3], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
                                 
         # Start the camera
-        
         start, end = coordinates_detection()
-        
-        time.sleep(4)
+        time.sleep(2)
         
         # if not start or not fin:
         #     self.pprint("Not valid coordinates detected")
@@ -1288,7 +1269,6 @@ class Movimiento(Node):
             return
         
         #Move to home
-        
         code = self._arm.set_position(*[199.8, 1.8, 199, 180, 0, 0.2], speed=self._tcp_speed, mvacc=self._tcp_acc, radius=0.0, wait=True)
         if not self._check_code(code, 'set_position'):
             return
@@ -1314,9 +1294,6 @@ class Movimiento(Node):
         if not self._check_code(code, 'set_servo_angle'):
             return
         
-        
-
-
 def main(args=None):
     import sys
     import threading
@@ -1326,7 +1303,6 @@ def main(args=None):
     rclpy.init(args=args)
     node = Movimiento(arm)
     
-
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
